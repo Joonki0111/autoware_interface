@@ -28,8 +28,8 @@ class RosccoToAW : public rclcpp::Node
         explicit RosccoToAW(const rclcpp::NodeOptions & node_options);
 
     private:
-        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr topic_throttle_command_matlab_; // HJK
-        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr topic_brake_command_matlab_; // HJK
+        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr topic_throttle_command_matlab_; 
+        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr topic_brake_command_matlab_; 
         rclcpp::Subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>::SharedPtr sub_autoware_linear_command_;
         rclcpp::Subscription<can_msgs::msg::Frame>::SharedPtr sub_can_;
 
@@ -51,10 +51,7 @@ class RosccoToAW : public rclcpp::Node
         double throttle; 
         double brake; 
         double steering; 
-        double angle; 
         float velocity_command;
-        int direction;
-        double speed_report;
 
         roscco_msgs::msg::ThrottleCommand roscco_throttle_msg;
         roscco_msgs::msg::BrakeCommand roscco_brake_msg;

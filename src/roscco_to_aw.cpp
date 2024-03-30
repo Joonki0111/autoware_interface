@@ -22,65 +22,49 @@ RosccoToAW::RosccoToAW(const rclcpp::NodeOptions & node_options) : Node("roscco_
     brake_cmd_pub_ = this->create_publisher<roscco_msgs::msg::BrakeCommand>("/brake_command", rclcpp::QoS(1));  
     steer_cmd_pub_ = this->create_publisher<roscco_msgs::msg::SteeringCommand>("/steering_command", rclcpp::QoS(1));  
     velocity_cmd_pub_ = this->create_publisher<std_msgs::msg::Float64>("/velocity_command", rclcpp::QoS(1));  
-    timer_ = this->create_wall_timer(50ms, std::bind(&RosccoToAW::timer_callback, this));
+    timer_ = this->create_wall_timer(50ms, std::bind(&RosccoToAW::timer_callback, this)); 
 }
 
 void RosccoToAW::topic_callback(const can_msgs::msg::Frame::SharedPtr msg)
 {
-    if(msg->id== 688) 
+  if(msg->id== 688) //0x2B0
+  {
+    double steering_angle_report = msg->data[0] + (msg->data[1] << 8);
+    if(steering_angle_report > 60000) 
     {
-      double steering_angle_report = msg->data[0] + (msg->data[1] << 8);
-      if(steering_angle_report > 60000) 
-      {
-          steering_angle_report -= 65535;
-      }
-      angle = steering_angle_report;
-      angle *= DEG2RAD;
-      angle /= 10.0;
-      angle += 0.06;
-      steer_msg_.stamp = msg->header.stamp;
-      steer_msg_.steering_tire_angle = (angle/15.7);
-      steer_pub_->publish(steer_msg_);
-    }    
+        steering_angle_report -= 65535;
+    }
+    double angle = steering_angle_report;
+    angle *= DEG2RAD;
+    angle /= 10.0;
+    angle += 0.06;
+    steer_msg_.stamp = msg->header.stamp;
+    steer_msg_.steering_tire_angle = (angle/15.7);
+    steer_pub_->publish(steer_msg_);
+  }    
 
-    if(msg->id== 1200)  //0x4B0 = 1200 
+  if(msg->id== 657) //0x291
+  {
+    double motor_revolution = msg->data[2] + msg->data[3] * 256; //RPM
+
+    if(motor_revolution > 60000) 
     {
-      speed_report = 0.5 * ((msg->data[4] + msg->data[5] * 256) + (msg->data[6] + msg->data[7] * 256));
-      speed_report *= WHEEL_SPEED_RATIO;
-
-      speed_report *= direction;
-      velocity_msg_.header.stamp = msg->header.stamp;
-      velocity_msg_.header.frame_id = "base_link";
-      velocity_msg_.longitudinal_velocity = speed_report * KPH2MPS;
-      velocity_msg_.heading_rate = ((speed_report * KPH2MPS)*std::tan(steer_msg_.steering_tire_angle))/SOUL_WHEEL_BASE;
-      velocity_pub_->publish(velocity_msg_);
-
-      velocity_matlab_msg.data = speed_report * KPH2MPS;
-      velocity_pub_matlab_->publish(velocity_matlab_msg);
+      motor_revolution -= 65535;
     }
 
-    if(msg->id== 657) //0x291 = 657
-    {
-      double motor_direction = msg->data[2] + msg->data[3] * 256;
+    double speed_report = motor_revolution / 2.1 * WHEEL_SPEED_RATIO;
 
-      if(motor_direction > 60000) 
-      {
-        motor_direction -= 65535;
-      }
+    velocity_msg_.header.stamp = msg->header.stamp;
+    velocity_msg_.header.frame_id = "base_link";
 
-      if(motor_direction < 0)
-      {
-        direction = -1;
-      }
-      else if(motor_direction > 0)
-      {
-        direction = 1;
-      }
-      else
-      {
-        direction = direction;
-      }
-    }
+    velocity_msg_.longitudinal_velocity = speed_report * KPH2MPS;
+    velocity_matlab_msg.data = speed_report * KPH2MPS;
+
+    velocity_msg_.heading_rate = ((speed_report * KPH2MPS)*std::tan(steer_msg_.steering_tire_angle))/SOUL_WHEEL_BASE;
+
+    velocity_pub_->publish(velocity_msg_);
+    velocity_pub_matlab_->publish(velocity_matlab_msg);
+  }
 }
 
 void RosccoToAW::throttleMLCommandCallback(const std_msgs::msg::Float64::SharedPtr msg)
@@ -99,8 +83,9 @@ void RosccoToAW::timer_callback()
     roscco_steering_msg.steering_torque = 0.0;
     throttle_cmd_pub_->publish(roscco_throttle_msg);
     brake_cmd_pub_->publish(roscco_brake_msg);
-    // steer_cmd_pub_->publish(roscco_steering_msg);
+    steer_cmd_pub_->publish(roscco_steering_msg);
 }
+
 void RosccoToAW::aw_callback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg)
 {
     velocity_command = msg->longitudinal.speed;
