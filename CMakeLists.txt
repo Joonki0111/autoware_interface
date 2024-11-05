@@ -13,6 +13,8 @@ find_package(autoware_auto_vehicle_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(autoware_auto_control_msgs REQUIRED)
 find_package(can_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 include_directories(include)
 
@@ -30,6 +32,8 @@ ament_target_dependencies(
   autoware_auto_vehicle_msgs
   autoware_auto_control_msgs
   can_msgs
+  sensor_msgs
+  visualization_msgs
 )
 
 rclcpp_components_register_nodes(

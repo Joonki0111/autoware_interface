@@ -11,6 +11,9 @@
 #include "autoware_auto_control_msgs/msg/ackermann_control_command.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "can_msgs/msg/frame.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "visualization_msgs/msg/marker.hpp"
+
 #include <chrono>
 #include <cmath>
 
@@ -28,21 +31,22 @@ class RosccoToAW : public rclcpp::Node
         explicit RosccoToAW(const rclcpp::NodeOptions & node_options);
 
     private:
-        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr sub_throttle_command_matlab_; 
-        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr sub_brake_command_matlab_; 
-        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr sub_steering_command_matlab_; 
-        rclcpp::Subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>::SharedPtr sub_autoware_command_;
-        rclcpp::Subscription<can_msgs::msg::Frame>::SharedPtr sub_can_;
+        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr TC_throttle_command_sub_; 
+        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr TC_brake_command_sub_; 
+        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr TC_steering_command_sub_; 
+        rclcpp::Subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>::SharedPtr autoware_command_sub_;
+        rclcpp::Subscription<can_msgs::msg::Frame>::SharedPtr CAN_sub_;
 
-        rclcpp::Publisher<autoware_auto_vehicle_msgs::msg::SteeringReport>::SharedPtr steer_pub_;
-        rclcpp::Publisher<autoware_auto_vehicle_msgs::msg::VelocityReport>::SharedPtr velocity_pub_;
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr velocity_pub_matlab_;
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr steer_pub_matlab_;
-        rclcpp::Publisher<roscco_msgs::msg::ThrottleCommand>::SharedPtr throttle_cmd_roscco_pub_;
-        rclcpp::Publisher<roscco_msgs::msg::BrakeCommand>::SharedPtr brake_cmd_roscco_pub_;
-        rclcpp::Publisher<roscco_msgs::msg::SteeringCommand>::SharedPtr steer_cmd_roscco_pub_;
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr velocity_cmd_matlab_pub_;
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr steer_cmd_matlab_pub_;
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_velocity_status_pub_;
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_steering_status_pub_;
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_velocity_cmd_pub_;
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_steer_cmd_pub_;
+        rclcpp::Publisher<autoware_auto_vehicle_msgs::msg::VelocityReport>::SharedPtr velocity_status_pub_;
+        rclcpp::Publisher<autoware_auto_vehicle_msgs::msg::SteeringReport>::SharedPtr steer_status_pub_;
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr steer_vel_pub_matlab_;
+        rclcpp::Publisher<roscco_msgs::msg::ThrottleCommand>::SharedPtr roscco_throttle_cmd_pub_;
+        rclcpp::Publisher<roscco_msgs::msg::BrakeCommand>::SharedPtr roscco_brake_cmd_pub_;
+        rclcpp::Publisher<roscco_msgs::msg::SteeringCommand>::SharedPtr roscco_steer_cmd_pub_;
 
         rclcpp::TimerBase::SharedPtr timer_;
 
@@ -51,13 +55,14 @@ class RosccoToAW : public rclcpp::Node
 
         std_msgs::msg::Float64 velocity_matlab_msg;
         std_msgs::msg::Float64 steer_matlab_msg;
+        std_msgs::msg::Float64 steer_vel_matlab_msg;
         std_msgs::msg::Float64 velocity_command_msg;
         std_msgs::msg::Float64 steer_command_msg;
 
         double throttle; 
         double brake; 
         double steering; 
-
+        double angle_prev;
         roscco_msgs::msg::ThrottleCommand roscco_throttle_msg;
         roscco_msgs::msg::BrakeCommand roscco_brake_msg;
         roscco_msgs::msg::SteeringCommand roscco_steering_msg;
@@ -68,6 +73,8 @@ class RosccoToAW : public rclcpp::Node
         void brakeMLCommandCallback(const std_msgs::msg::Float64::SharedPtr msg);
         void timer_callback();
         void aw_callback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg);
+        void CM_IMU_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+        void pubMarker(const sensor_msgs::msg::Imu point);
 };
 }
 #endif  // ROSCCO__ROSCCO_TO_AW_HPP_
