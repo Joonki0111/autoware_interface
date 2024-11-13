@@ -3,6 +3,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <memory>
+#include <chrono>
+#include <cmath>
 #include "roscco_msgs/msg/brake_command.hpp"
 #include "roscco_msgs/msg/throttle_command.hpp"
 #include "roscco_msgs/msg/steering_command.hpp"
@@ -12,9 +14,6 @@
 #include "std_msgs/msg/float64.hpp"
 #include "can_msgs/msg/frame.hpp"
 #include "sensor_msgs/msg/imu.hpp"
-
-#include <chrono>
-#include <cmath>
 
 #define KPH2MPS 1/3.6
 #define SOUL_WHEEL_BASE 2.57048
@@ -39,28 +38,26 @@ class AutowareInterface : public rclcpp::Node
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_velocity_status_pub_;
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_steering_status_pub_;
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_velocity_cmd_pub_;
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_steer_cmd_pub_;
+        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_steer_cmd__pub_;
         rclcpp::Publisher<autoware_auto_vehicle_msgs::msg::VelocityReport>::SharedPtr velocity_status_pub_;
         rclcpp::Publisher<autoware_auto_vehicle_msgs::msg::SteeringReport>::SharedPtr steer_status_pub_;
-        rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr steer_vel_pub_matlab_;
         rclcpp::Publisher<roscco_msgs::msg::ThrottleCommand>::SharedPtr roscco_throttle_cmd_pub_;
         rclcpp::Publisher<roscco_msgs::msg::BrakeCommand>::SharedPtr roscco_brake_cmd_pub_;
         rclcpp::Publisher<roscco_msgs::msg::SteeringCommand>::SharedPtr roscco_steer_cmd_pub_;
 
         rclcpp::TimerBase::SharedPtr timer_;
 
-        autoware_auto_vehicle_msgs::msg::SteeringReport steer_msg_;
-        autoware_auto_vehicle_msgs::msg::VelocityReport velocity_msg_;
+        autoware_auto_vehicle_msgs::msg::SteeringReport AW_steering_status_msg_;
+        autoware_auto_vehicle_msgs::msg::VelocityReport AW_velocity_status_msg_;
 
-        std_msgs::msg::Float64 velocity_matlab_msg;
-        std_msgs::msg::Float64 steer_matlab_msg;
-        std_msgs::msg::Float64 steer_vel_matlab_msg;
-        std_msgs::msg::Float64 velocity_command_msg;
-        std_msgs::msg::Float64 steer_command_msg;
+        std_msgs::msg::Float64 TC_velocity_status_msg_;
+        std_msgs::msg::Float64 TC_steer_status_msg_;
+        std_msgs::msg::Float64 TC_velocity_command_msg_;
+        std_msgs::msg::Float64 TC_steer_matlab_msg_;
 
-        double TC_throttle_cmd; 
-        double TC_brake_cmd; 
-        double TC_steer_cmd; 
+        double TC_throttle_cmd_; 
+        double TC_brake_cmd_; 
+        double TC_steer_cmd_; 
 
         roscco_msgs::msg::ThrottleCommand roscco_throttle_msg;
         roscco_msgs::msg::BrakeCommand roscco_brake_msg;
@@ -73,7 +70,6 @@ class AutowareInterface : public rclcpp::Node
         void timer_callback();
         void AWcmdcallback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg);
         void CM_IMU_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
-        void pubMarker(const sensor_msgs::msg::Imu point);
 };
 }
 #endif  // AUTOWARE_INTERFACE__AUTOWARE_INTERFACE_HPP_

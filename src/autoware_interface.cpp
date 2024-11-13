@@ -2,10 +2,9 @@
 
 namespace autoware_interface_ns
 {
-
 using namespace std::chrono_literals;
 
-AutowareInterface::AutowareInterface(const rclcpp::NodeOptions & node_options) : Node("roscco_to_aw_node", node_options)
+AutowareInterface::AutowareInterface(const rclcpp::NodeOptions & node_options) : Node("autoware_interface", node_options)
 {
     TC_throttle_command_sub_ = this->create_subscription<std_msgs::msg::Float64>(
         "/twist_controller/output/brake_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCthrottlecmdCallback, this,std::placeholders::_1));
@@ -21,7 +20,7 @@ AutowareInterface::AutowareInterface(const rclcpp::NodeOptions & node_options) :
     TC_velocity_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/velocity_status", rclcpp::QoS(1));
     TC_steering_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/steering_status", rclcpp::QoS(1));   
     TC_velocity_cmd_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/velocity_cmd", rclcpp::QoS(1)); 
-    TC_steer_cmd_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/steering_cmd", rclcpp::QoS(1));
+    TC_steer_cmd__pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/steering_cmd", rclcpp::QoS(1));
     velocity_status_pub_ = this->create_publisher<autoware_auto_vehicle_msgs::msg::VelocityReport>(
         "/vehicle/status/velocity_status", rclcpp::QoS(1));
     steer_status_pub_ = this->create_publisher<autoware_auto_vehicle_msgs::msg::SteeringReport>(
@@ -45,12 +44,12 @@ void AutowareInterface::CANCallback(const can_msgs::msg::Frame::SharedPtr msg)
         double angle = steering_angle_report;
         angle *= DEG2RAD;
         angle /= 10.0;
-        steer_msg_.stamp = msg->header.stamp;
-        steer_msg_.steering_tire_angle = (angle/15.7);
-        steer_status_pub_->publish(steer_msg_);
+        AW_steering_status_msg_.stamp = msg->header.stamp;
+        AW_steering_status_msg_.steering_tire_angle = (angle/15.7);
+        steer_status_pub_->publish(AW_steering_status_msg_);
 
-        steer_matlab_msg.data = angle;
-        TC_steering_status_pub_->publish(steer_matlab_msg);
+        TC_steer_status_msg_.data = angle;
+        TC_steering_status_pub_->publish(TC_steer_status_msg_);
     }    
 
     if(msg->id== 657) //0x291
@@ -64,44 +63,44 @@ void AutowareInterface::CANCallback(const can_msgs::msg::Frame::SharedPtr msg)
 
         double speed_report = motor_revolution / 2.1 * WHEEL_SPEED_RATIO;
 
-        velocity_msg_.header.stamp = msg->header.stamp;
-        velocity_msg_.header.frame_id = "base_link";
+        AW_velocity_status_msg_.header.stamp = msg->header.stamp;
+        AW_velocity_status_msg_.header.frame_id = "base_link";
 
-        velocity_msg_.longitudinal_velocity = speed_report * KPH2MPS;
-        velocity_matlab_msg.data = speed_report * KPH2MPS;
+        AW_velocity_status_msg_.longitudinal_velocity = speed_report * KPH2MPS;
+        TC_velocity_status_msg_.data = speed_report * KPH2MPS;
 
-        velocity_msg_.heading_rate = ((speed_report * KPH2MPS)*std::tan(steer_msg_.steering_tire_angle))/SOUL_WHEEL_BASE;
+        AW_velocity_status_msg_.heading_rate = ((speed_report * KPH2MPS)*std::tan(AW_steering_status_msg_.steering_tire_angle))/SOUL_WHEEL_BASE;
 
-        velocity_status_pub_->publish(velocity_msg_);
-        TC_velocity_status_pub_->publish(velocity_matlab_msg);
+        velocity_status_pub_->publish(AW_velocity_status_msg_);
+        TC_velocity_status_pub_->publish(TC_velocity_status_msg_);
     }
 }
 
 void AutowareInterface::TCthrottlecmdCallback(const std_msgs::msg::Float64::SharedPtr msg)
 {
-    TC_throttle_cmd = msg->data;
+    TC_throttle_cmd_ = msg->data;
 }
 void AutowareInterface::TCbrakecmdCallback(const std_msgs::msg::Float64::SharedPtr msg)
 {
-    TC_brake_cmd = msg->data;
+    TC_brake_cmd_ = msg->data;
 }
 void AutowareInterface::TCsteercmdCallback(const std_msgs::msg::Float64::SharedPtr msg)
 {
-    TC_steer_cmd = msg->data;
+    TC_steer_cmd_ = msg->data;
 }
 
 void AutowareInterface::timer_callback()
 {
-    roscco_throttle_msg.throttle_position = TC_throttle_cmd;
-    roscco_brake_msg.brake_position = TC_brake_cmd;
-    roscco_steering_msg.steering_torque = TC_steer_cmd;
+    roscco_throttle_msg.throttle_position = TC_throttle_cmd_;
+    roscco_brake_msg.brake_position = TC_brake_cmd_;
+    roscco_steering_msg.steering_torque = TC_steer_cmd_;
 
     roscco_throttle_cmd_pub_->publish(roscco_throttle_msg);
     roscco_brake_cmd_pub_->publish(roscco_brake_msg);
     roscco_steer_cmd_pub_->publish(roscco_steering_msg);
     
-    steer_status_pub_->publish(steer_msg_);
-    TC_steering_status_pub_->publish(steer_matlab_msg);
+    steer_status_pub_->publish(AW_steering_status_msg_);
+    TC_steering_status_pub_->publish(TC_steer_status_msg_);
 }
 
 void AutowareInterface::AWcmdcallback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg)
@@ -109,11 +108,11 @@ void AutowareInterface::AWcmdcallback(const autoware_auto_control_msgs::msg::Ack
     float velocity_command = msg->longitudinal.speed;
     float steer_command = msg->lateral.steering_tire_angle;
     
-    velocity_command_msg.data = velocity_command;
-    steer_command_msg.data = steer_command*15.7;
+    TC_velocity_command_msg_.data = velocity_command;
+    TC_steer_matlab_msg_.data = steer_command*15.7;
     
-    TC_velocity_cmd_pub_->publish(velocity_command_msg);
-    TC_steer_cmd_pub_->publish(steer_command_msg);
+    TC_velocity_cmd_pub_->publish(TC_velocity_command_msg_);
+    TC_steer_cmd__pub_->publish(TC_steer_matlab_msg_);
 }
 
 } // namespace autoware_interface_ns
