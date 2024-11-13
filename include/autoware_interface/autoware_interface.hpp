@@ -1,5 +1,5 @@
-#ifndef ROSCCO__ROSCCO_TO_AW_HPP_
-#define ROSCCO__ROSCCO_TO_AW_HPP_
+#ifndef AUTOWARE_INTERFACE__AUTOWARE_INTERFACE_HPP_
+#define AUTOWARE_INTERFACE__AUTOWARE_INTERFACE_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 #include <memory>
@@ -12,7 +12,6 @@
 #include "std_msgs/msg/float64.hpp"
 #include "can_msgs/msg/frame.hpp"
 #include "sensor_msgs/msg/imu.hpp"
-#include "visualization_msgs/msg/marker.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -22,13 +21,13 @@
 #define DEG2RAD 0.0174533
 #define WHEEL_SPEED_RATIO 0.03125
 
-namespace roscco_component
+namespace autoware_interface_ns
 {
 
-class RosccoToAW : public rclcpp::Node
+class AutowareInterface : public rclcpp::Node
 {
     public:
-        explicit RosccoToAW(const rclcpp::NodeOptions & node_options);
+        explicit AutowareInterface(const rclcpp::NodeOptions & node_options);
 
     private:
         rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr TC_throttle_command_sub_; 
@@ -59,22 +58,22 @@ class RosccoToAW : public rclcpp::Node
         std_msgs::msg::Float64 velocity_command_msg;
         std_msgs::msg::Float64 steer_command_msg;
 
-        double throttle; 
-        double brake; 
-        double steering; 
-        double angle_prev;
+        double TC_throttle_cmd; 
+        double TC_brake_cmd; 
+        double TC_steer_cmd; 
+
         roscco_msgs::msg::ThrottleCommand roscco_throttle_msg;
         roscco_msgs::msg::BrakeCommand roscco_brake_msg;
         roscco_msgs::msg::SteeringCommand roscco_steering_msg;
 
-        void topic_callback(const can_msgs::msg::Frame::SharedPtr msg);
-        void throttleMLCommandCallback(const std_msgs::msg::Float64::SharedPtr msg);
-        void steeringMLCommandCallback(const std_msgs::msg::Float64::SharedPtr msg);
-        void brakeMLCommandCallback(const std_msgs::msg::Float64::SharedPtr msg);
+        void CANCallback(const can_msgs::msg::Frame::SharedPtr msg);
+        void TCthrottlecmdCallback(const std_msgs::msg::Float64::SharedPtr msg);
+        void TCsteercmdCallback(const std_msgs::msg::Float64::SharedPtr msg);
+        void TCbrakecmdCallback(const std_msgs::msg::Float64::SharedPtr msg);
         void timer_callback();
-        void aw_callback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg);
+        void AWcmdcallback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg);
         void CM_IMU_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
         void pubMarker(const sensor_msgs::msg::Imu point);
 };
 }
-#endif  // ROSCCO__ROSCCO_TO_AW_HPP_
+#endif  // AUTOWARE_INTERFACE__AUTOWARE_INTERFACE_HPP_

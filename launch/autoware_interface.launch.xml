@@ -1,6 +1,6 @@
 <launch>
   <node_container pkg="rclcpp_components" exec="component_container" name="my_container" namespace="" args="test_args">
-    <composable_node pkg="roscco_to_aw" plugin="roscco_component::RosccoToAW" name="RosccoToAW" namespace="">
+    <composable_node pkg="autoware_interface" plugin="autoware_interface_ns::AutowareInterface" name="AutowareInterface" namespace="">
       <extra_arg name="use_intra_process_comms" value="true"/>
     </composable_node>
   </node_container>

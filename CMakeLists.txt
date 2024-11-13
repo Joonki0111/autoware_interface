@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(roscco_to_aw)
+project(autoware_interface)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -14,17 +14,17 @@ find_package(std_msgs REQUIRED)
 find_package(autoware_auto_control_msgs REQUIRED)
 find_package(can_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(visualization_msgs REQUIRED)
+find_package(autoware_planning_msgs REQUIRED)
 
 include_directories(include)
 
 add_library(
-  roscco_to_aw SHARED
-  src/roscco_to_aw.cpp
+  autoware_interface SHARED
+  src/autoware_interface.cpp
 )
 
 ament_target_dependencies(
-  roscco_to_aw
+  autoware_interface
   rclcpp
   rclcpp_components
   roscco_msgs
@@ -33,16 +33,16 @@ ament_target_dependencies(
   autoware_auto_control_msgs
   can_msgs
   sensor_msgs
-  visualization_msgs
+  autoware_planning_msgs
 )
 
 rclcpp_components_register_nodes(
-  roscco_to_aw
-  "roscco_component::RosccoToAW"
+  autoware_interface
+  "autoware_interface_ns::AutowareInterface"
 )
 
 install(TARGETS 
-  roscco_to_aw
+  autoware_interface
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

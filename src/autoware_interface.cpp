@@ -1,25 +1,27 @@
-#include "roscco_to_aw/roscco_to_aw.hpp"
+#include "autoware_interface/autoware_interface.hpp"
 
-namespace roscco_component
+namespace autoware_interface_ns
 {
+
 using namespace std::chrono_literals;
-RosccoToAW::RosccoToAW(const rclcpp::NodeOptions & node_options) : Node("roscco_to_aw_node", node_options)
+
+AutowareInterface::AutowareInterface(const rclcpp::NodeOptions & node_options) : Node("roscco_to_aw_node", node_options)
 {
     TC_throttle_command_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-        "/twist_controller/output/brake_cmd", rclcpp::QoS(1), std::bind(&RosccoToAW::brakeMLCommandCallback, this,std::placeholders::_1));
+        "/twist_controller/output/brake_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCthrottlecmdCallback, this,std::placeholders::_1));
     TC_brake_command_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-        "/twist_controller/output/throttle_cmd", rclcpp::QoS(1), std::bind(&RosccoToAW::throttleMLCommandCallback, this,std::placeholders::_1));
+        "/twist_controller/output/throttle_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCbrakecmdCallback, this,std::placeholders::_1));
     TC_steering_command_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-        "/twist_controller/output/steering_cmd", rclcpp::QoS(1), std::bind(&RosccoToAW::steeringMLCommandCallback, this,std::placeholders::_1));
+        "/twist_controller/output/steering_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCsteercmdCallback, this,std::placeholders::_1));
     autoware_command_sub_ = this->create_subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>(
-        "/control/command/control_cmd", rclcpp::QoS(1), std::bind(&RosccoToAW::aw_callback, this, std::placeholders::_1));
+        "/control/command/control_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::AWcmdcallback, this, std::placeholders::_1));
     CAN_sub_ = this->create_subscription<can_msgs::msg::Frame>(
-        "/from_can_bus", rclcpp::QoS(1), std::bind(&RosccoToAW::topic_callback, this, std::placeholders::_1));
+        "/from_can_bus", rclcpp::QoS(1), std::bind(&AutowareInterface::CANCallback, this, std::placeholders::_1));
 
-    TC_velocity_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/status/velocity", rclcpp::QoS(1));
-    TC_steering_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/status/steering_angle", rclcpp::QoS(1));   
-    TC_velocity_cmd_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/command/velocity_cmd", rclcpp::QoS(1)); 
-    TC_steer_cmd_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/command/steering_cmd", rclcpp::QoS(1));
+    TC_velocity_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/velocity_status", rclcpp::QoS(1));
+    TC_steering_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/steering_status", rclcpp::QoS(1));   
+    TC_velocity_cmd_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/velocity_cmd", rclcpp::QoS(1)); 
+    TC_steer_cmd_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/steering_cmd", rclcpp::QoS(1));
     velocity_status_pub_ = this->create_publisher<autoware_auto_vehicle_msgs::msg::VelocityReport>(
         "/vehicle/status/velocity_status", rclcpp::QoS(1));
     steer_status_pub_ = this->create_publisher<autoware_auto_vehicle_msgs::msg::SteeringReport>(
@@ -28,10 +30,10 @@ RosccoToAW::RosccoToAW(const rclcpp::NodeOptions & node_options) : Node("roscco_
     roscco_brake_cmd_pub_ = this->create_publisher<roscco_msgs::msg::BrakeCommand>("/roscco/brake_cmd", rclcpp::QoS(1));
     roscco_steer_cmd_pub_ = this->create_publisher<roscco_msgs::msg::SteeringCommand>("/roscco/steering_cmd", rclcpp::QoS(1));
 
-    timer_ = this->create_wall_timer(10ms, std::bind(&RosccoToAW::timer_callback, this)); 
+    timer_ = this->create_wall_timer(10ms, std::bind(&AutowareInterface::timer_callback, this)); 
 }
 
-void RosccoToAW::topic_callback(const can_msgs::msg::Frame::SharedPtr msg)
+void AutowareInterface::CANCallback(const can_msgs::msg::Frame::SharedPtr msg)
 {
     if(msg->id== 688) //0x2B0
     {
@@ -43,7 +45,6 @@ void RosccoToAW::topic_callback(const can_msgs::msg::Frame::SharedPtr msg)
         double angle = steering_angle_report;
         angle *= DEG2RAD;
         angle /= 10.0;
-        angle += 0.06;
         steer_msg_.stamp = msg->header.stamp;
         steer_msg_.steering_tire_angle = (angle/15.7);
         steer_status_pub_->publish(steer_msg_);
@@ -76,32 +77,34 @@ void RosccoToAW::topic_callback(const can_msgs::msg::Frame::SharedPtr msg)
     }
 }
 
-void RosccoToAW::throttleMLCommandCallback(const std_msgs::msg::Float64::SharedPtr msg)
+void AutowareInterface::TCthrottlecmdCallback(const std_msgs::msg::Float64::SharedPtr msg)
 {
-    throttle = msg->data;
+    TC_throttle_cmd = msg->data;
 }
-void RosccoToAW::brakeMLCommandCallback(const std_msgs::msg::Float64::SharedPtr msg)
+void AutowareInterface::TCbrakecmdCallback(const std_msgs::msg::Float64::SharedPtr msg)
 {
-    brake = msg->data;
+    TC_brake_cmd = msg->data;
 }
-void RosccoToAW::steeringMLCommandCallback(const std_msgs::msg::Float64::SharedPtr msg)
+void AutowareInterface::TCsteercmdCallback(const std_msgs::msg::Float64::SharedPtr msg)
 {
-    steering = msg->data;
+    TC_steer_cmd = msg->data;
 }
 
-void RosccoToAW::timer_callback()
+void AutowareInterface::timer_callback()
 {
-    roscco_throttle_msg.throttle_position = throttle;
-    roscco_brake_msg.brake_position = brake;
-    roscco_steering_msg.steering_torque = steering;
+    roscco_throttle_msg.throttle_position = TC_throttle_cmd;
+    roscco_brake_msg.brake_position = TC_brake_cmd;
+    roscco_steering_msg.steering_torque = TC_steer_cmd;
+
     roscco_throttle_cmd_pub_->publish(roscco_throttle_msg);
     roscco_brake_cmd_pub_->publish(roscco_brake_msg);
     roscco_steer_cmd_pub_->publish(roscco_steering_msg);
+    
     steer_status_pub_->publish(steer_msg_);
     TC_steering_status_pub_->publish(steer_matlab_msg);
 }
 
-void RosccoToAW::aw_callback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg)
+void AutowareInterface::AWcmdcallback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg)
 {
     float velocity_command = msg->longitudinal.speed;
     float steer_command = msg->lateral.steering_tire_angle;
@@ -113,6 +116,6 @@ void RosccoToAW::aw_callback(const autoware_auto_control_msgs::msg::AckermannCon
     TC_steer_cmd_pub_->publish(steer_command_msg);
 }
 
-} // namespace roscco_component
+} // namespace autoware_interface_ns
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(roscco_component::RosccoToAW)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware_interface_ns::AutowareInterface)
