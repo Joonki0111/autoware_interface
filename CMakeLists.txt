@@ -13,7 +13,6 @@ find_package(autoware_auto_vehicle_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(autoware_auto_control_msgs REQUIRED)
 find_package(can_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
 find_package(autoware_planning_msgs REQUIRED)
 
 include_directories(include)
@@ -32,7 +31,6 @@ ament_target_dependencies(
   autoware_auto_vehicle_msgs
   autoware_auto_control_msgs
   can_msgs
-  sensor_msgs
   autoware_planning_msgs
 )
 
