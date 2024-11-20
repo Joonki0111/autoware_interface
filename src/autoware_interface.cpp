@@ -10,9 +10,9 @@ AutowareInterface::AutowareInterface(const rclcpp::NodeOptions & node_options) :
     CAN_sub_ = this->create_subscription<can_msgs::msg::Frame>(
         "/from_can_bus", rclcpp::QoS(1), std::bind(&AutowareInterface::CANCallback, this, std::placeholders::_1));
     TC_throttle_command_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-        "/twist_controller/output/brake_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCthrottlecmdCallback, this,std::placeholders::_1));
+        "/twist_controller/output/throttle_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCthrottlecmdCallback, this,std::placeholders::_1));
     TC_brake_command_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-        "/twist_controller/output/throttle_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCbrakecmdCallback, this,std::placeholders::_1));
+        "/twist_controller/output/brake_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCbrakecmdCallback, this,std::placeholders::_1));
     TC_steer_command_sub_ = this->create_subscription<std_msgs::msg::Float64>(
         "/twist_controller/output/steering_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCsteercmdCallback, this,std::placeholders::_1));
     AW_command_sub_ = this->create_subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>(
@@ -104,7 +104,7 @@ void AutowareInterface::timer_callback()
     roscco_msgs::msg::SteeringCommand ROSCCO_steering_msg;
 
     ROSCCO_throttle_msg.throttle_position = TC_throttle_cmd_;
-    ROSCCO_brake_msg.brake_position = TC_throttle_cmd_;
+    ROSCCO_brake_msg.brake_position = TC_brake_cmd_;
     ROSCCO_steering_msg.steering_torque = TC_steer_cmd_;
 
     ROSCCO_throttle_cmd_pub_->publish(ROSCCO_throttle_msg);
