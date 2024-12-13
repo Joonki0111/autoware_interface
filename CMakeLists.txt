@@ -8,12 +8,10 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
-find_package(roscco_msgs REQUIRED)
-find_package(autoware_auto_vehicle_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(autoware_auto_control_msgs REQUIRED)
 find_package(can_msgs REQUIRED)
-find_package(autoware_planning_msgs REQUIRED)
+find_package(autoware_auto_vehicle_msgs REQUIRED)
+find_package(autoware_auto_control_msgs REQUIRED)
 
 include_directories(include)
 
@@ -26,12 +24,10 @@ ament_target_dependencies(
   autoware_interface
   rclcpp
   rclcpp_components
-  roscco_msgs
   std_msgs
+  can_msgs
   autoware_auto_vehicle_msgs
   autoware_auto_control_msgs
-  can_msgs
-  autoware_planning_msgs
 )
 
 rclcpp_components_register_nodes(
@@ -50,6 +46,12 @@ install(DIRECTORY
   launch
   DESTINATION share/${PROJECT_NAME}
 )
+
+install(DIRECTORY
+  config
+  DESTINATION share/${PROJECT_NAME}
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)
