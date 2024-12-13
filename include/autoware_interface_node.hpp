@@ -30,10 +30,10 @@
 #define MANULAL 1
 #define AUTONOMOUS 3
 
-class AwToCan : public rclcpp::Node 
+class AutowareInterface : public rclcpp::Node 
 {
     public:
-        AwToCan();
+        AutowareInterface();
 
     private:
         // Pub
@@ -48,7 +48,7 @@ class AwToCan : public rclcpp::Node
 
         // Sub
         rclcpp::Subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>::SharedPtr sub_aw_command_;
-        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr TC_thro_cmd;
+        rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr TC_throttle_cmd;
         rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr TC_brake_cmd;
         rclcpp::Subscription<std_msgs::msg::Int16>::SharedPtr TC_steer_cmd;
 
@@ -60,7 +60,7 @@ class AwToCan : public rclcpp::Node
         // Timer
         rclcpp::TimerBase::SharedPtr timer_;            
         
-        float TC_thro_output_cmd_ = 0.0;
+        float TC_throttle_output_cmd_ = 0.0;
         float TC_brake_output_cmd_ = 0.0;
         int16_t TC_steer_output_cmd_ = 0;
         bool use_motor_revolution_ = false;
@@ -68,7 +68,7 @@ class AwToCan : public rclcpp::Node
         void interface_can_data_callback(const can_msgs::msg::Frame::SharedPtr msg);
         void motor_can_data_callback(const can_msgs::msg::Frame::SharedPtr msg);
         void AwCmd_callback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg);
-        void TCthro_callback(const std_msgs::msg::Float64::SharedPtr msg);
+        void TCthrottle_callback(const std_msgs::msg::Float64::SharedPtr msg);
         void TCbrake_callback(const std_msgs::msg::Float64::SharedPtr msg);
         void TCsteer_callback(const std_msgs::msg::Int16::SharedPtr msg);
         void TimerCallback();

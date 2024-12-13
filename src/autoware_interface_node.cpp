@@ -2,7 +2,7 @@
 
 using namespace std::chrono_literals;
 
-AwToCan::AwToCan() : Node("Aw_to_CAN")
+AutowareInterface::AutowareInterface() : Node("Aw_to_CAN")
 {
     use_motor_revolution_ = this->declare_parameter("use_motor_revolution", false);
     
@@ -18,27 +18,27 @@ AwToCan::AwToCan() : Node("Aw_to_CAN")
 
     // sub  
     sub_aw_command_ = this->create_subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>(
-        "/control/command/control_cmd", rclcpp::QoS(1), std::bind(&AwToCan::AwCmd_callback, this, std::placeholders::_1));
-    TC_thro_cmd = this->create_subscription<std_msgs::msg::Float64>(
-        "/twist_controller/output/throttle_cmd", rclcpp::QoS(1), std::bind(&AwToCan::TCthro_callback, this, std::placeholders::_1));
+        "/control/command/control_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::AwCmd_callback, this, std::placeholders::_1));
+    TC_throttle_cmd = this->create_subscription<std_msgs::msg::Float64>(
+        "/twist_controller/output/throttle_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCthrottle_callback, this, std::placeholders::_1));
     TC_brake_cmd = this->create_subscription<std_msgs::msg::Float64>(
-        "/twist_controller/output/brake_cmd", rclcpp::QoS(1), std::bind(&AwToCan::TCbrake_callback, this, std::placeholders::_1));
+        "/twist_controller/output/brake_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCbrake_callback, this, std::placeholders::_1));
     TC_steer_cmd = this->create_subscription<std_msgs::msg::Int16>(
-        "/twist_controller/output/steer_cmd", rclcpp::QoS(1), std::bind(&AwToCan::TCsteer_callback, this, std::placeholders::_1));
+        "/twist_controller/output/steer_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCsteer_callback, this, std::placeholders::_1));
 
     // Can bridge
     interface_sub_can_ = this->create_subscription<can_msgs::msg::Frame>(
-        "/socketcan/interface/from_can_bus", rclcpp::QoS(1), std::bind(&AwToCan::interface_can_data_callback, this, std::placeholders::_1));
+        "/socketcan/interface/from_can_bus", rclcpp::QoS(1), std::bind(&AutowareInterface::interface_can_data_callback, this, std::placeholders::_1));
     interface_pub_can_ = this->create_publisher<can_msgs::msg::Frame>(
         "/socketcan/interface/to_can_bus", rclcpp::QoS(1));
     motor_sub_can_= this->create_subscription<can_msgs::msg::Frame>(
-        "/socketcan/motor/from_can_bus", rclcpp::QoS(1), std::bind(&AwToCan::motor_can_data_callback, this, std::placeholders::_1));
+        "/socketcan/motor/from_can_bus", rclcpp::QoS(1), std::bind(&AutowareInterface::motor_can_data_callback, this, std::placeholders::_1));
 
     // timer
-    timer_ = this->create_wall_timer(10ms, std::bind(&AwToCan::TimerCallback, this));
+    timer_ = this->create_wall_timer(10ms, std::bind(&AutowareInterface::TimerCallback, this));
 }
 
-void AwToCan::interface_can_data_callback(const can_msgs::msg::Frame::SharedPtr msg)
+void AutowareInterface::interface_can_data_callback(const can_msgs::msg::Frame::SharedPtr msg)
 {
     if(msg->id == 513) // 201
     {
@@ -104,7 +104,7 @@ void AwToCan::interface_can_data_callback(const can_msgs::msg::Frame::SharedPtr 
 
 }
 
-void AwToCan::motor_can_data_callback(const can_msgs::msg::Frame::SharedPtr msg)
+void AutowareInterface::motor_can_data_callback(const can_msgs::msg::Frame::SharedPtr msg)
 {
     if(msg->id == 402724847) //  Motor_control id 180117EF
     {
@@ -123,7 +123,7 @@ void AwToCan::motor_can_data_callback(const can_msgs::msg::Frame::SharedPtr msg)
     }
 }
 
-void AwToCan::AwCmd_callback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg)
+void AutowareInterface::AwCmd_callback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg)
 {
     std_msgs::msg::Float64 TC_velocity_cmd_msg;
     std_msgs::msg::Float64 TC_steer_cmd_msg;
@@ -135,24 +135,24 @@ void AwToCan::AwCmd_callback(const autoware_auto_control_msgs::msg::AckermannCon
     TC_steer_cmd_pub_->publish(TC_steer_cmd_msg);
 }
 
-void AwToCan::TCthro_callback(const std_msgs::msg::Float64::SharedPtr msg)
+void AutowareInterface::TCthrottle_callback(const std_msgs::msg::Float64::SharedPtr msg)
 {
-    TC_thro_output_cmd_ = msg->data;
+    TC_throttle_output_cmd_ = msg->data;
 }
 
-void AwToCan::TCbrake_callback(const std_msgs::msg::Float64::SharedPtr msg)
+void AutowareInterface::TCbrake_callback(const std_msgs::msg::Float64::SharedPtr msg)
 {   
     TC_brake_output_cmd_ = msg->data;
 }
 
-void AwToCan::TCsteer_callback(const std_msgs::msg::Int16::SharedPtr msg)
+void AutowareInterface::TCsteer_callback(const std_msgs::msg::Int16::SharedPtr msg)
 {   
     TC_steer_output_cmd_ = msg->data;
 }
 
-void AwToCan::TimerCallback()
+void AutowareInterface::TimerCallback()
 {
-    uint8_t throttle_can = static_cast<uint8_t>(std::clamp(TC_thro_output_cmd_ * SPEEDCMD2SIG, 0.0, 255.0));
+    uint8_t throttle_can = static_cast<uint8_t>(std::clamp(TC_throttle_output_cmd_ * SPEEDCMD2SIG, 0.0, 255.0));
     uint8_t brake_can = static_cast<uint8_t>(std::clamp(TC_brake_output_cmd_ * SPEEDCMD2SIG, 0.0, 255.0));
 
     can_msgs::msg::Frame can_data;
@@ -180,7 +180,7 @@ void AwToCan::TimerCallback()
 int main(int argc, char *argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<AwToCan>());
+  rclcpp::spin(std::make_shared<AutowareInterface>());
   rclcpp::shutdown();
   return 0;
 }
