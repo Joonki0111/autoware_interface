@@ -6,7 +6,7 @@ namespace autoware_interface_ns
 using namespace std::chrono_literals;
 
 AutowareInterface::AutowareInterface(const rclcpp::NodeOptions & node_options) : Node("roscco_to_aw_node", node_options)
-{
+{   
     vehicle_CAN_sub_ = this->create_subscription<can_msgs::msg::Frame>(
         "/socketcan/vehicle/from_can_bus", rclcpp::QoS(1), std::bind(&AutowareInterface::VehicleCANCallback, this, std::placeholders::_1));
     ROSCCO_CAN_sub_ = this->create_subscription<can_msgs::msg::Frame>(
@@ -19,6 +19,8 @@ AutowareInterface::AutowareInterface(const rclcpp::NodeOptions & node_options) :
         "/twist_controller/output/steering_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCsteercmdCallback, this,std::placeholders::_1));
     AW_command_sub_ = this->create_subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>(
         "/control/command/control_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::AWcmdcallback, this, std::placeholders::_1));
+    TC_time_sub_ = this->create_subscription<rosgraph_msgs::msg::Clock>(
+        "/twist_controller/output/time", rclcpp::QoS(1), std::bind(&AutowareInterface::TCtimeCallback, this,std::placeholders::_1)); //250304 JSJ
 
     TC_velocity_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/velocity_status", rclcpp::QoS(1));
     TC_steer_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/steering_status", rclcpp::QoS(1));   
@@ -33,6 +35,9 @@ AutowareInterface::AutowareInterface(const rclcpp::NodeOptions & node_options) :
     ROSCCO_brake_cmd_pub_ = this->create_publisher<roscco_msgs::msg::BrakeCommand>("/roscco/brake_cmd", rclcpp::QoS(1));
     ROSCCO_steer_cmd_pub_ = this->create_publisher<roscco_msgs::msg::SteeringCommand>("/roscco/steering_cmd", rclcpp::QoS(1));
     ROSCCO_status_pub_ = this->create_publisher<roscco_msgs::msg::RosccoStatus>("/roscco/status", rclcpp::QoS(1));
+    autoware_control_pub_ = this->create_publisher<autoware_auto_vehicle_msgs::msg::ControlModeReport>(
+        "/vehicle/status/control_mode", rclcpp::QoS(1));
+    clock_pub = create_publisher<rosgraph_msgs::msg::Clock>("/clock", 1); //HJK_250311_A
 
     timer_ = this->create_wall_timer(10ms, std::bind(&AutowareInterface::TimerCallback, this));
 }
@@ -96,11 +101,14 @@ void AutowareInterface::TCsteercmdCallback(const std_msgs::msg::Float64::SharedP
 {
     TC_steer_cmd_ = msg->data;
 }
-
 void AutowareInterface::AWcmdcallback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg)
 {
     AW_velocity_command_ = msg->longitudinal.speed;
     AW_steer_command_ = msg->lateral.steering_tire_angle;
+}
+void AutowareInterface::TCtimeCallback(const rosgraph_msgs::msg::Clock clock_msg)
+{
+    TC_time_ = clock_msg.clock;
 }
 
 void AutowareInterface::TimerCallback()
@@ -108,6 +116,7 @@ void AutowareInterface::TimerCallback()
     // To Autoware
     autoware_auto_vehicle_msgs::msg::VelocityReport AW_velocity_status_msg;
     autoware_auto_vehicle_msgs::msg::SteeringReport AW_steering_tire_status_msg;
+    autoware_auto_vehicle_msgs::msg::ControlModeReport autoware_control_msg;
 
     AW_velocity_status_msg.header.stamp = this->now();
     AW_velocity_status_msg.header.frame_id = "base_link";
@@ -119,16 +128,27 @@ void AutowareInterface::TimerCallback()
     AW_velocity_status_pub_->publish(AW_velocity_status_msg);
     AW_steer_status_pub_->publish(AW_steering_tire_status_msg);
 
-
+    autoware_control_msg.mode = 1;
+    autoware_control_pub_->publish(autoware_control_msg);
 
     // To Roscco
     roscco_msgs::msg::ThrottleCommand ROSCCO_throttle_msg;
     roscco_msgs::msg::BrakeCommand ROSCCO_brake_msg;
     roscco_msgs::msg::SteeringCommand ROSCCO_steering_msg;
 
-    ROSCCO_throttle_msg.throttle_position = TC_throttle_cmd_;
-    ROSCCO_brake_msg.brake_position = TC_brake_cmd_;
-    ROSCCO_steering_msg.steering_torque = TC_steer_cmd_;
+    const double dt = (this->now() - TC_time_).seconds();
+    if(std::fabs(dt) > 0.1f)
+    {
+        ROSCCO_throttle_msg.throttle_position = 0.0;
+        ROSCCO_brake_msg.brake_position = 0.0;
+        ROSCCO_steering_msg.steering_torque = 0.0;
+    }
+    else
+    {
+        ROSCCO_throttle_msg.throttle_position = TC_throttle_cmd_;
+        ROSCCO_brake_msg.brake_position = TC_brake_cmd_;
+        ROSCCO_steering_msg.steering_torque = TC_steer_cmd_;
+    }
 
     ROSCCO_throttle_cmd_pub_->publish(ROSCCO_throttle_msg);
     ROSCCO_brake_cmd_pub_->publish(ROSCCO_brake_msg);
@@ -169,6 +189,10 @@ void AutowareInterface::TimerCallback()
     roscco_status_msg.steering_status = roscco_status_.steer_enabled;
     roscco_status_msg.throttle_status = roscco_status_.throttle_enabled;
     ROSCCO_status_pub_->publish(roscco_status_msg);
+
+    rosgraph_msgs::msg::Clock clock_msg; //HJK_250311_A
+    clock_msg.clock = now(); //HJK_250311_A
+    clock_pub->publish(clock_msg); //HJK_250311_A
 }
 } // namespace autoware_interface_ns
 #include <rclcpp_components/register_node_macro.hpp>
