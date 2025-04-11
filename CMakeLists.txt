@@ -7,7 +7,6 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rclcpp_components REQUIRED)
 find_package(roscco_msgs REQUIRED)
 find_package(autoware_auto_vehicle_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -17,15 +16,14 @@ find_package(autoware_planning_msgs REQUIRED)
 find_package(rosgraph_msgs REQUIRED)
 include_directories(include)
 
-add_library(
-  autoware_interface SHARED
+add_executable(
+  autoware_interface_node
   src/autoware_interface.cpp
 )
 
 ament_target_dependencies(
-  autoware_interface
+  autoware_interface_node
   rclcpp
-  rclcpp_components
   roscco_msgs
   std_msgs
   autoware_auto_vehicle_msgs
@@ -34,22 +32,10 @@ ament_target_dependencies(
   autoware_planning_msgs
 )
 
-rclcpp_components_register_nodes(
-  autoware_interface
-  "autoware_interface_ns::AutowareInterface"
+install(TARGETS autoware_interface_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-install(TARGETS 
-  autoware_interface
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
-
-install(DIRECTORY
-  launch
-  DESTINATION share/${PROJECT_NAME}
-)
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)

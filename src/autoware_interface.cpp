@@ -1,11 +1,8 @@
 #include "autoware_interface/autoware_interface.hpp"
 
-namespace autoware_interface_ns
-{
-
 using namespace std::chrono_literals;
 
-AutowareInterface::AutowareInterface(const rclcpp::NodeOptions & node_options) : Node("roscco_to_aw_node", node_options)
+AutowareInterface::AutowareInterface() : Node("autoware_interface")
 {   
     vehicle_CAN_sub_ = this->create_subscription<can_msgs::msg::Frame>(
         "/socketcan/vehicle/from_can_bus", rclcpp::QoS(1), std::bind(&AutowareInterface::VehicleCANCallback, this, std::placeholders::_1));
@@ -194,6 +191,11 @@ void AutowareInterface::TimerCallback()
     clock_msg.clock = now(); //HJK_250311_A
     clock_pub->publish(clock_msg); //HJK_250311_A
 }
-} // namespace autoware_interface_ns
-#include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware_interface_ns::AutowareInterface)
+
+int main(int argc, char **argv) 
+{
+    rclcpp::init(argc, argv);
+    rclcpp::spin(std::make_shared<AutowareInterface>());
+    rclcpp::shutdown();
+    return 0;
+}

@@ -1,6 +1,3 @@
-#ifndef AUTOWARE_INTERFACE__AUTOWARE_INTERFACE_HPP_
-#define AUTOWARE_INTERFACE__AUTOWARE_INTERFACE_HPP_
-
 #include <memory>
 #include <chrono>
 #include <cmath>
@@ -24,12 +21,10 @@
 #define DEG2RAD 0.0174533
 #define WHEEL_SPEED_RATIO 0.03125
 
-namespace autoware_interface_ns
-{
 class AutowareInterface : public rclcpp::Node
 {
     public:
-        explicit AutowareInterface(const rclcpp::NodeOptions & node_options);
+        explicit AutowareInterface();
 
     private:
         struct ROSCCOStatus
@@ -82,5 +77,3 @@ class AutowareInterface : public rclcpp::Node
         void TCtimeCallback(const rosgraph_msgs::msg::Clock clock_msg);
         void TimerCallback();
 };
-}
-#endif  // AUTOWARE_INTERFACE__AUTOWARE_INTERFACE_HPP_
