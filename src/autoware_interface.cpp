@@ -23,7 +23,7 @@ AutowareInterface::AutowareInterface() : Node("autoware_interface")
     TC_steer_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/steering_status", rclcpp::QoS(1));   
     TC_velocity_cmd_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/velocity_cmd", rclcpp::QoS(1)); 
     TC_steer_cmd_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/steering_cmd", rclcpp::QoS(1));
-    TC_ROSCCO_status_pub_ = this->create_publisher<std_msgs::msg::Bool>("/roscco_status", rclcpp::QoS(1));
+    TC_ROSCCO_status_pub_ = this->create_publisher<std_msgs::msg::Bool>("/twist_controller/roscco/status", rclcpp::QoS(1));
     AW_velocity_status_pub_ = this->create_publisher<autoware_auto_vehicle_msgs::msg::VelocityReport>(
         "/vehicle/status/velocity_status", rclcpp::QoS(1));
     AW_steer_status_pub_ = this->create_publisher<autoware_auto_vehicle_msgs::msg::SteeringReport>(
