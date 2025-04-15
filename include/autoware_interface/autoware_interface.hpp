@@ -14,7 +14,9 @@
 #include "std_msgs/msg/bool.hpp"
 #include "can_msgs/msg/frame.hpp"
 #include "rosgraph_msgs/msg/clock.hpp"
-
+#include "autoware_system_msgs/msg/component_status.hpp"
+#include "autoware_system_msgs/msg/component_status.hpp"
+#include "adma_ros_driver_msgs/msg/adma_data_scaled.hpp"
 
 #define KPH2MPS 1/3.6
 #define SOUL_WHEEL_BASE 2.57048
@@ -33,15 +35,27 @@ class AutowareInterface : public rclcpp::Node
             bool steer_enabled = false;
             bool throttle_enabled = false;
         };
+        struct AliveClock
+        {
+            rclcpp::Time roscco;
+            rclcpp::Time adma;
+            rclcpp::Time os;
+            rclcpp::Time tc;
+            rclcpp::Time roscco_can;
+            rclcpp::Time vehicle_can;
+        };
 
         rclcpp::Subscription<can_msgs::msg::Frame>::SharedPtr vehicle_CAN_sub_;
         rclcpp::Subscription<can_msgs::msg::Frame>::SharedPtr ROSCCO_CAN_sub_;
         rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr TC_throttle_command_sub_; 
         rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr TC_brake_command_sub_; 
         rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr TC_steer_command_sub_;
-        rclcpp::Subscription<rosgraph_msgs::msg::Clock>::SharedPtr TC_time_sub_;  
+        rclcpp::Subscription<rosgraph_msgs::msg::Clock>::SharedPtr TC_clock_sub_;
+        rclcpp::Subscription<rosgraph_msgs::msg::Clock>::SharedPtr ROSCCO_clock_sub_;
+        rclcpp::Subscription<rosgraph_msgs::msg::Clock>::SharedPtr Ouster_clock_sub_;
+        rclcpp::Subscription<adma_ros_driver_msgs::msg::AdmaDataScaled>::SharedPtr ADMA_clock_sub_;
         rclcpp::Subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>::SharedPtr AW_command_sub_;
-        
+    
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_velocity_status_pub_;
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_steer_status_pub_;
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_velocity_cmd_pub_;
@@ -54,12 +68,14 @@ class AutowareInterface : public rclcpp::Node
         rclcpp::Publisher<roscco_msgs::msg::BrakeCommand>::SharedPtr ROSCCO_brake_cmd_pub_;
         rclcpp::Publisher<roscco_msgs::msg::SteeringCommand>::SharedPtr ROSCCO_steer_cmd_pub_;
         rclcpp::Publisher<roscco_msgs::msg::RosccoStatus>::SharedPtr ROSCCO_status_pub_;
+        rclcpp::Publisher<autoware_system_msgs::msg::ComponentStatus>::SharedPtr component_status_pub_;
         rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub; //HJK_250311_A
 
         rclcpp::TimerBase::SharedPtr timer_;
         
         ROSCCOStatus roscco_status_{};
-        rclcpp::Time TC_time_ = this->now();
+        AliveClock alive_clock_;
+        bool use_sim_time_;
         double TC_throttle_cmd_ = 0.0; 
         double TC_brake_cmd_ = 0.0; 
         double TC_steer_cmd_ = 0.0; 
@@ -74,6 +90,10 @@ class AutowareInterface : public rclcpp::Node
         void TCbrakecmdCallback(const std_msgs::msg::Float64::SharedPtr msg);
         void TCsteercmdCallback(const std_msgs::msg::Float64::SharedPtr msg);
         void AWcmdcallback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg);
-        void TCtimeCallback(const rosgraph_msgs::msg::Clock clock_msg);
+        void TCclockCallback(const rosgraph_msgs::msg::Clock clock_msg);
+        void ROSCCOclockCallback(const rosgraph_msgs::msg::Clock clock_msg);
+        void OusterclockCallback(const rosgraph_msgs::msg::Clock clock_msg);
+        void ADMAclockCallback(const adma_ros_driver_msgs::msg::AdmaDataScaled adma_msg);
         void TimerCallback();
-};
+        inline autoware_system_msgs::msg::ComponentStatus IsComponentAlive(const AliveClock alive_clock);
+    };

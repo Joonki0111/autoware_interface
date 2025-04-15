@@ -3,7 +3,14 @@
 using namespace std::chrono_literals;
 
 AutowareInterface::AutowareInterface() : Node("autoware_interface")
-{   
+{
+    alive_clock_.roscco = get_clock()->now();
+    alive_clock_.adma = get_clock()->now();
+    alive_clock_.os = get_clock()->now();
+    alive_clock_.tc = get_clock()->now();
+    alive_clock_.roscco_can = get_clock()->now();
+    alive_clock_.vehicle_can = get_clock()->now();
+
     vehicle_CAN_sub_ = this->create_subscription<can_msgs::msg::Frame>(
         "/socketcan/vehicle/from_can_bus", rclcpp::QoS(1), std::bind(&AutowareInterface::VehicleCANCallback, this, std::placeholders::_1));
     ROSCCO_CAN_sub_ = this->create_subscription<can_msgs::msg::Frame>(
@@ -16,8 +23,14 @@ AutowareInterface::AutowareInterface() : Node("autoware_interface")
         "/twist_controller/output/steering_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCsteercmdCallback, this,std::placeholders::_1));
     AW_command_sub_ = this->create_subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>(
         "/control/command/control_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::AWcmdcallback, this, std::placeholders::_1));
-    TC_time_sub_ = this->create_subscription<rosgraph_msgs::msg::Clock>(
-        "/twist_controller/output/time", rclcpp::QoS(1), std::bind(&AutowareInterface::TCtimeCallback, this,std::placeholders::_1)); //250304 JSJ
+    TC_clock_sub_ = this->create_subscription<rosgraph_msgs::msg::Clock>(
+        "/twist_controller/output/clock", rclcpp::QoS(1), std::bind(&AutowareInterface::TCclockCallback, this,std::placeholders::_1)); //250304 JSJ
+    ROSCCO_clock_sub_ = this->create_subscription<rosgraph_msgs::msg::Clock>(
+        "/roscco/clock", rclcpp::QoS(1), std::bind(&AutowareInterface::ROSCCOclockCallback, this,std::placeholders::_1));
+    Ouster_clock_sub_ = this->create_subscription<rosgraph_msgs::msg::Clock>(
+        "/sensing/ouster/clock", rclcpp::QoS(1), std::bind(&AutowareInterface::OusterclockCallback, this,std::placeholders::_1));
+    ADMA_clock_sub_ = this->create_subscription<adma_ros_driver_msgs::msg::AdmaDataScaled>(
+        "/genesys/adma/data_scaled", rclcpp::QoS(1), std::bind(&AutowareInterface::ADMAclockCallback, this,std::placeholders::_1));
 
     TC_velocity_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/velocity_status", rclcpp::QoS(1));
     TC_steer_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/steering_status", rclcpp::QoS(1));   
@@ -34,6 +47,8 @@ AutowareInterface::AutowareInterface() : Node("autoware_interface")
     ROSCCO_status_pub_ = this->create_publisher<roscco_msgs::msg::RosccoStatus>("/roscco/status", rclcpp::QoS(1));
     autoware_control_pub_ = this->create_publisher<autoware_auto_vehicle_msgs::msg::ControlModeReport>(
         "/vehicle/status/control_mode", rclcpp::QoS(1));
+    component_status_pub_ = this->create_publisher<autoware_system_msgs::msg::ComponentStatus>(
+        "/system/status/component_status", rclcpp::QoS(1));
     clock_pub = create_publisher<rosgraph_msgs::msg::Clock>("/clock", 1); //HJK_250311_A
 
     timer_ = this->create_wall_timer(10ms, std::bind(&AutowareInterface::TimerCallback, this));
@@ -65,6 +80,7 @@ void AutowareInterface::VehicleCANCallback(const can_msgs::msg::Frame::SharedPtr
 
         velocity_ = motor_revolution / 2.1 * WHEEL_SPEED_RATIO;
     }
+    alive_clock_.vehicle_can = msg->header.stamp;
 }
 void AutowareInterface::ROSCCOCANCallback(const can_msgs::msg::Frame::SharedPtr msg)
 {
@@ -84,6 +100,7 @@ void AutowareInterface::ROSCCOCANCallback(const can_msgs::msg::Frame::SharedPtr 
         default:
             break;
     }
+    alive_clock_.roscco_can = msg->header.stamp;
 }
 
 void AutowareInterface::TCthrottlecmdCallback(const std_msgs::msg::Float64::SharedPtr msg)
@@ -103,9 +120,21 @@ void AutowareInterface::AWcmdcallback(const autoware_auto_control_msgs::msg::Ack
     AW_velocity_command_ = msg->longitudinal.speed;
     AW_steer_command_ = msg->lateral.steering_tire_angle;
 }
-void AutowareInterface::TCtimeCallback(const rosgraph_msgs::msg::Clock clock_msg)
+void AutowareInterface::TCclockCallback(const rosgraph_msgs::msg::Clock clock_msg)
 {
-    TC_time_ = clock_msg.clock;
+    alive_clock_.tc = clock_msg.clock;
+}
+void AutowareInterface::ROSCCOclockCallback(const rosgraph_msgs::msg::Clock clock_msg)
+{
+    alive_clock_.roscco = clock_msg.clock;
+}
+void AutowareInterface::OusterclockCallback(const rosgraph_msgs::msg::Clock clock_msg)
+{
+    alive_clock_.os = clock_msg.clock;
+}
+void AutowareInterface::ADMAclockCallback(const adma_ros_driver_msgs::msg::AdmaDataScaled adma_msg)
+{
+    alive_clock_.adma = adma_msg.header.stamp;
 }
 
 void AutowareInterface::TimerCallback()
@@ -133,7 +162,7 @@ void AutowareInterface::TimerCallback()
     roscco_msgs::msg::BrakeCommand ROSCCO_brake_msg;
     roscco_msgs::msg::SteeringCommand ROSCCO_steering_msg;
 
-    const double dt = (this->now() - TC_time_).seconds();
+    const double dt = (this->now() - alive_clock_.tc).seconds();
     if(std::fabs(dt) > 0.1f)
     {
         ROSCCO_throttle_msg.throttle_position = 0.0;
@@ -187,9 +216,24 @@ void AutowareInterface::TimerCallback()
     roscco_status_msg.throttle_status = roscco_status_.throttle_enabled;
     ROSCCO_status_pub_->publish(roscco_status_msg);
 
+    autoware_system_msgs::msg::ComponentStatus component_status_msg = IsComponentAlive(alive_clock_);
+    component_status_pub_->publish(component_status_msg);
+
     rosgraph_msgs::msg::Clock clock_msg; //HJK_250311_A
     clock_msg.clock = now(); //HJK_250311_A
     clock_pub->publish(clock_msg); //HJK_250311_A
+}
+
+inline autoware_system_msgs::msg::ComponentStatus AutowareInterface::IsComponentAlive(const AutowareInterface::AliveClock alive_clock)
+{
+    autoware_system_msgs::msg::ComponentStatus component_status_msg;
+    component_status_msg.is_roscco_alive = (this->now() - alive_clock.roscco).seconds() > 0.5f ? false : true;
+    component_status_msg.is_adma_alive = (this->now() - alive_clock.adma).seconds() > 0.5f ? false : true;
+    component_status_msg.is_os_alive = (this->now() - alive_clock.os).seconds() > 0.5f ? false : true;
+    component_status_msg.is_tc_alive = (this->now() - alive_clock.tc).seconds() > 0.5f ? false : true;
+    component_status_msg.is_roscco_can_alive = (this->now() - alive_clock.roscco_can).seconds() > 0.5f ? false : true;
+    component_status_msg.is_vehicle_can_alive = (this->now() - alive_clock.vehicle_can).seconds() > 0.5f ? false : true;
+    return component_status_msg;
 }
 
 int main(int argc, char **argv) 
