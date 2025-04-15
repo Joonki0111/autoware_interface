@@ -203,7 +203,7 @@ void AutowareInterface::TimerCallback()
         TC_steer_command_msg.data = 0.0;
     }
     TC_steer_status_msg.data = steering_angle_;
-    if(roscco_status_.brake_enabled + roscco_status_.steer_enabled + roscco_status_.throttle_enabled == 1)
+    if(roscco_status_.brake_enabled + roscco_status_.steer_enabled + roscco_status_.throttle_enabled == 3)
     {
         TC_roscco_status_msg.data = true;
     }
