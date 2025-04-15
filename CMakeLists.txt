@@ -16,6 +16,7 @@ find_package(autoware_planning_msgs REQUIRED)
 find_package(rosgraph_msgs REQUIRED)
 find_package(autoware_system_msgs REQUIRED)
 find_package(adma_ros_driver_msgs REQUIRED)
+find_package(autoware_adapi_v1_msgs REQUIRED)
 
 include_directories(include)
 
@@ -35,6 +36,7 @@ ament_target_dependencies(
   autoware_planning_msgs
   autoware_system_msgs
   adma_ros_driver_msgs
+  autoware_adapi_v1_msgs
 )
 
 install(TARGETS autoware_interface_node

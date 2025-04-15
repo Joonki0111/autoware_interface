@@ -17,6 +17,7 @@
 #include "autoware_system_msgs/msg/component_status.hpp"
 #include "autoware_system_msgs/msg/component_status.hpp"
 #include "adma_ros_driver_msgs/msg/adma_data_scaled.hpp"
+#include "autoware_adapi_v1_msgs/msg/operation_mode_state.hpp"
 
 #define KPH2MPS 1/3.6
 #define SOUL_WHEEL_BASE 2.57048
@@ -55,7 +56,8 @@ class AutowareInterface : public rclcpp::Node
         rclcpp::Subscription<rosgraph_msgs::msg::Clock>::SharedPtr Ouster_clock_sub_;
         rclcpp::Subscription<adma_ros_driver_msgs::msg::AdmaDataScaled>::SharedPtr ADMA_clock_sub_;
         rclcpp::Subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>::SharedPtr AW_command_sub_;
-    
+        rclcpp::Subscription<autoware_adapi_v1_msgs::msg::OperationModeState>::SharedPtr AW_mode_sub_;
+        
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_velocity_status_pub_;
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_steer_status_pub_;
         rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr TC_velocity_cmd_pub_;
@@ -75,7 +77,7 @@ class AutowareInterface : public rclcpp::Node
         
         ROSCCOStatus roscco_status_{};
         AliveClock alive_clock_;
-        bool use_sim_time_;
+        int aw_current_mode_ = 1;
         double TC_throttle_cmd_ = 0.0; 
         double TC_brake_cmd_ = 0.0; 
         double TC_steer_cmd_ = 0.0; 
@@ -90,6 +92,7 @@ class AutowareInterface : public rclcpp::Node
         void TCbrakecmdCallback(const std_msgs::msg::Float64::SharedPtr msg);
         void TCsteercmdCallback(const std_msgs::msg::Float64::SharedPtr msg);
         void AWcmdcallback(const autoware_auto_control_msgs::msg::AckermannControlCommand::SharedPtr msg);
+        void AWmodecallback(const autoware_adapi_v1_msgs::msg::OperationModeState::SharedPtr msg);
         void TCclockCallback(const rosgraph_msgs::msg::Clock clock_msg);
         void ROSCCOclockCallback(const rosgraph_msgs::msg::Clock clock_msg);
         void OusterclockCallback(const rosgraph_msgs::msg::Clock clock_msg);

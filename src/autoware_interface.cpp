@@ -23,6 +23,8 @@ AutowareInterface::AutowareInterface() : Node("autoware_interface")
         "/twist_controller/output/steering_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::TCsteercmdCallback, this,std::placeholders::_1));
     AW_command_sub_ = this->create_subscription<autoware_auto_control_msgs::msg::AckermannControlCommand>(
         "/control/command/control_cmd", rclcpp::QoS(1), std::bind(&AutowareInterface::AWcmdcallback, this, std::placeholders::_1));
+    AW_mode_sub_ = this->create_subscription<autoware_adapi_v1_msgs::msg::OperationModeState>(
+        "/control/vehicle_cmd_gate/operation_mode", rclcpp::QoS(1), std::bind(&AutowareInterface::AWmodecallback, this, std::placeholders::_1));
     TC_clock_sub_ = this->create_subscription<rosgraph_msgs::msg::Clock>(
         "/twist_controller/output/clock", rclcpp::QoS(1), std::bind(&AutowareInterface::TCclockCallback, this,std::placeholders::_1)); //250304 JSJ
     ROSCCO_clock_sub_ = this->create_subscription<rosgraph_msgs::msg::Clock>(
@@ -120,6 +122,10 @@ void AutowareInterface::AWcmdcallback(const autoware_auto_control_msgs::msg::Ack
     AW_velocity_command_ = msg->longitudinal.speed;
     AW_steer_command_ = msg->lateral.steering_tire_angle;
 }
+void AutowareInterface::AWmodecallback(const autoware_adapi_v1_msgs::msg::OperationModeState::SharedPtr msg)
+{
+    aw_current_mode_ = msg->mode;
+}
 void AutowareInterface::TCclockCallback(const rosgraph_msgs::msg::Clock clock_msg)
 {
     alive_clock_.tc = clock_msg.clock;
@@ -192,8 +198,12 @@ void AutowareInterface::TimerCallback()
     TC_velocity_command_msg.data = AW_velocity_command_;
     TC_velocity_status_msg.data = velocity_ * KPH2MPS;
     TC_steer_command_msg.data = AW_steer_command_ * 15.7;
+    if(aw_current_mode_ == 1)
+    {
+        TC_steer_command_msg.data = 0.0;
+    }
     TC_steer_status_msg.data = steering_angle_;
-    if(roscco_status_.brake_enabled + roscco_status_.steer_enabled + roscco_status_.throttle_enabled == 3)
+    if(roscco_status_.brake_enabled + roscco_status_.steer_enabled + roscco_status_.throttle_enabled == 1)
     {
         TC_roscco_status_msg.data = true;
     }
