@@ -30,7 +30,7 @@ AutowareInterface::AutowareInterface() : Node("autoware_interface")
     Ouster_clock_sub_ = this->create_subscription<rosgraph_msgs::msg::Clock>(
         "/sensing/ouster/clock", rclcpp::QoS(1), std::bind(&AutowareInterface::OusterclockCallback, this,std::placeholders::_1));
     ADMA_clock_sub_ = this->create_subscription<adma_ros_driver_msgs::msg::AdmaDataScaled>(
-        "/genesys/adma/data_scaled", rclcpp::QoS(1), std::bind(&AutowareInterface::ADMAclockCallback, this,std::placeholders::_1));
+        "/sensing/genesys/adma/data_scaled", rclcpp::QoS(1), std::bind(&AutowareInterface::ADMAclockCallback, this,std::placeholders::_1));
 
     TC_velocity_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/velocity_status", rclcpp::QoS(1));
     TC_steer_status_pub_ = this->create_publisher<std_msgs::msg::Float64>("/twist_controller/input/steering_status", rclcpp::QoS(1));   
