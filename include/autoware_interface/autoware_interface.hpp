@@ -74,7 +74,8 @@ class AutowareInterface : public rclcpp::Node
         rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub; //HJK_250311_A
 
         rclcpp::TimerBase::SharedPtr timer_;
-        
+        rclcpp::TimerBase::SharedPtr clock_timer_;
+
         ROSCCOStatus roscco_status_{};
         AliveClock alive_clock_;
         int aw_current_mode_ = 1;
@@ -98,5 +99,6 @@ class AutowareInterface : public rclcpp::Node
         void OusterclockCallback(const rosgraph_msgs::msg::Clock clock_msg);
         void ADMAclockCallback(const adma_ros_driver_msgs::msg::AdmaDataScaled adma_msg);
         void TimerCallback();
+        void ClockTimerCallback();
         inline autoware_system_msgs::msg::ComponentStatus IsComponentAlive(const AliveClock alive_clock);
     };

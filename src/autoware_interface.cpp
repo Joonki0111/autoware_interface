@@ -54,6 +54,7 @@ AutowareInterface::AutowareInterface() : Node("autoware_interface")
     clock_pub = create_publisher<rosgraph_msgs::msg::Clock>("/clock", 1); //HJK_250311_A
 
     timer_ = this->create_wall_timer(10ms, std::bind(&AutowareInterface::TimerCallback, this));
+    clock_timer_ = this->create_wall_timer(100ms, std::bind(&AutowareInterface::ClockTimerCallback, this));
 }
 
 void AutowareInterface::VehicleCANCallback(const can_msgs::msg::Frame::SharedPtr msg)
@@ -228,10 +229,6 @@ void AutowareInterface::TimerCallback()
 
     autoware_system_msgs::msg::ComponentStatus component_status_msg = IsComponentAlive(alive_clock_);
     component_status_pub_->publish(component_status_msg);
-
-    rosgraph_msgs::msg::Clock clock_msg; //HJK_250311_A
-    clock_msg.clock = now(); //HJK_250311_A
-    clock_pub->publish(clock_msg); //HJK_250311_A
 }
 
 inline autoware_system_msgs::msg::ComponentStatus AutowareInterface::IsComponentAlive(const AutowareInterface::AliveClock alive_clock)
@@ -244,6 +241,13 @@ inline autoware_system_msgs::msg::ComponentStatus AutowareInterface::IsComponent
     component_status_msg.is_roscco_can_alive = (this->now() - alive_clock.roscco_can).seconds() > 0.5f ? false : true;
     component_status_msg.is_vehicle_can_alive = (this->now() - alive_clock.vehicle_can).seconds() > 0.5f ? false : true;
     return component_status_msg;
+}
+
+void AutowareInterface::ClockTimerCallback()
+{
+    rosgraph_msgs::msg::Clock clock_msg; //HJK_250311_A
+    clock_msg.clock = now(); //HJK_250311_A
+    clock_pub->publish(clock_msg); //HJK_250311_A
 }
 
 int main(int argc, char **argv) 
