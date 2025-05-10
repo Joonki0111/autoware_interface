@@ -14,6 +14,12 @@
 
   <depend>rclcpp</depend>
   <depend>roscco_msgs</depend>
+  <depend>autoware_auto_vehicle_msgs</depend>
+  <depend>autoware_auto_control_msgs</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_system_msgs</depend>
+  <depend>adma_ros_driver_msgs</depend>
+  <depend>autoware_adapi_v1_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
