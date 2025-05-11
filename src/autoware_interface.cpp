@@ -55,6 +55,8 @@ AutowareInterface::AutowareInterface() : Node("autoware_interface")
 
     timer_ = this->create_wall_timer(10ms, std::bind(&AutowareInterface::TimerCallback, this));
     clock_timer_ = this->create_wall_timer(100ms, std::bind(&AutowareInterface::ClockTimerCallback, this));
+
+    AW_stop_client_ = this->create_client<autoware_adapi_v1_msgs::srv::ChangeOperationMode>("/api/operation_mode/change_to_stop");
 }
 
 void AutowareInterface::VehicleCANCallback(const can_msgs::msg::Frame::SharedPtr msg)
@@ -203,13 +205,23 @@ void AutowareInterface::TimerCallback()
     {
         TC_steer_command_msg.data = 0.0;
     }
+
     TC_steer_status_msg.data = steering_angle_;
+
     if(roscco_status_.brake_enabled + roscco_status_.steer_enabled + roscco_status_.throttle_enabled == 3)
     {
         TC_roscco_status_msg.data = true;
     }
     else
     {
+        if(aw_current_mode_ == 2)
+        {
+            std::shared_ptr<autoware_adapi_v1_msgs::srv::ChangeOperationMode::Request> request = 
+                std::make_shared<autoware_adapi_v1_msgs::srv::ChangeOperationMode::Request>();
+            std::shared_future<std::shared_ptr<autoware_adapi_v1_msgs::srv::ChangeOperationMode::Response>> result = 
+                AW_stop_client_->async_send_request(request);
+        }
+
         TC_roscco_status_msg.data = false;
     }
 

@@ -10,6 +10,7 @@
 #include "autoware_auto_vehicle_msgs/msg/velocity_report.hpp"
 #include "autoware_auto_vehicle_msgs/msg/control_mode_report.hpp"
 #include "autoware_auto_control_msgs/msg/ackermann_control_command.hpp"
+#include "autoware_adapi_v1_msgs/srv/change_operation_mode.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "can_msgs/msg/frame.hpp"
@@ -75,6 +76,8 @@ class AutowareInterface : public rclcpp::Node
 
         rclcpp::TimerBase::SharedPtr timer_;
         rclcpp::TimerBase::SharedPtr clock_timer_;
+
+        rclcpp::Client<autoware_adapi_v1_msgs::srv::ChangeOperationMode>::SharedPtr AW_stop_client_;
 
         ROSCCOStatus roscco_status_{};
         AliveClock alive_clock_;
