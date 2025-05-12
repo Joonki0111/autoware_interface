@@ -52,6 +52,7 @@ AutowareInterface::AutowareInterface() : Node("autoware_interface")
     component_status_pub_ = this->create_publisher<autoware_system_msgs::msg::ComponentStatus>(
         "/system/status/component_status", rclcpp::QoS(1));
     clock_pub = create_publisher<rosgraph_msgs::msg::Clock>("/clock", 1); //HJK_250311_A
+    steer_aligned_status_pub_ = this->create_publisher<std_msgs::msg::Bool>("/vehicle/steer_aligned_status", rclcpp::QoS(1));
 
     timer_ = this->create_wall_timer(10ms, std::bind(&AutowareInterface::TimerCallback, this));
     clock_timer_ = this->create_wall_timer(100ms, std::bind(&AutowareInterface::ClockTimerCallback, this));
@@ -241,6 +242,23 @@ void AutowareInterface::TimerCallback()
 
     autoware_system_msgs::msg::ComponentStatus component_status_msg = IsComponentAlive(alive_clock_);
     component_status_pub_->publish(component_status_msg);
+
+
+
+    bool is_steer_aligned = false;
+
+    if(std::abs(steering_angle_) < 0.3)
+    {
+        is_steer_aligned = true;
+    }
+    else
+    {
+        is_steer_aligned = false;
+    }
+
+    std_msgs::msg::Bool steer_aligned_status_msg;
+    steer_aligned_status_msg.data = is_steer_aligned;
+    steer_aligned_status_pub_->publish(steer_aligned_status_msg);
 }
 
 inline autoware_system_msgs::msg::ComponentStatus AutowareInterface::IsComponentAlive(const AutowareInterface::AliveClock alive_clock)

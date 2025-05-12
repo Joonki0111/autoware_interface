@@ -73,7 +73,8 @@ class AutowareInterface : public rclcpp::Node
         rclcpp::Publisher<roscco_msgs::msg::RosccoStatus>::SharedPtr ROSCCO_status_pub_;
         rclcpp::Publisher<autoware_system_msgs::msg::ComponentStatus>::SharedPtr component_status_pub_;
         rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub; //HJK_250311_A
-
+        rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr steer_aligned_status_pub_;
+        
         rclcpp::TimerBase::SharedPtr timer_;
         rclcpp::TimerBase::SharedPtr clock_timer_;
 
